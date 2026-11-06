@@ -1,0 +1,65 @@
+# Все сервисы проекта
+services:
+  # Backend-сервис OrderFlow
+  backend:
+    # Собрать образ backend по Dockerfile из папки ./backend
+    build: ./backend
+
+    # Проброс порта:
+    # Windows:8000 -> container:8000
+    ports:
+      - "8000:8000"
+
+    # Переменные окружения для backend
+    environment:
+      # Backend подключается к PostgreSQL по имени сервиса "postgres"
+      DATABASE_URL: ${DATABASE_URL}
+
+    # Backend зависит от PostgreSQL
+    depends_on:
+      postgres:
+        # Backend запустится после того, как PostgreSQL пройдет healthcheck
+        condition: service_healthy
+
+  # PostgreSQL-сервис
+  postgres:
+    # Используем готовый образ PostgreSQL 17
+    image: postgres:17
+
+    # Переменные окружения для первоначальной настройки PostgreSQL
+    environment:
+      # Пользователь PostgreSQL
+      POSTGRES_USER: ${POSTGRES_USER}
+
+      # Пароль пользователя PostgreSQL
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+      # База данных, которая будет создана при первом запуске
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    # Windows:55432 -> container:5432
+    ports:
+      - "55432:5432"
+
+    # Проверка, что PostgreSQL реально готов принимать подключения
+    healthcheck:
+      # Команда проверки готовности БД
+      test: ["CMD-SHELL", "pg_isready -U orderflow -d orderflow"]
+
+      # Проверять каждые 5 секунд
+      interval: 5s
+
+      # Максимальное время одной проверки
+      timeout: 5s
+
+      # После 5 неудачных проверок контейнер считается unhealthy
+      retries: 5
+
+    # Подключаем постоянное хранилище для данных PostgreSQL
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+# Docker volumes проекта
+volumes:
+  # Здесь будут храниться данные PostgreSQL между перезапусками контейнера
+  postgres_data:

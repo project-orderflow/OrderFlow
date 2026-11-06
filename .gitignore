@@ -15,6 +15,9 @@ dist/
 .vscode/
 .idea/
 
+# Local agent instructions
+AGENTS.md
+
 # OS
 .DS_Store
 Thumbs.db
