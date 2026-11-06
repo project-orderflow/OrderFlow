@@ -16,3 +16,17 @@ async def root() -> dict[str, str]:
     "message": "OrderFlow API",
     "enviroment": settings.environment,
   }
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+  return {"status": "ok"}
+
+
+@app.get("/api/v1/system/info")
+async def system_info() -> dict[str, str]:
+  return {
+    "name": settings.app_name,
+    "version": app.version,
+    "environment": settings.environment,
+  }
