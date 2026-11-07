@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 
+from orderflow.modules.catalog.router import router as catalog_router
+from orderflow.modules.identity.router import router as auth_router
 from orderflow.shared.config import get_settings
 
 
@@ -9,6 +11,9 @@ app = FastAPI(
   title="OrderFlow API",
   version="0.1.0",
 )
+
+app.include_router(auth_router)
+app.include_router(catalog_router)
 
 @app.get("/")
 async def root() -> dict[str, str]:
