@@ -8,6 +8,8 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]",
     "pydantic-settings",
+    "pwdlib[argon2]",
+    "PyJWT",
     "sqlalchemy[asyncio]>=2.0",
     "asyncpg",
     "alembic"
