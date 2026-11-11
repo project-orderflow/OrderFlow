@@ -1,75 +1,196 @@
-# React + TypeScript + Vite
+# OrderFlow Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend операторской панели OrderFlow. Приложение построено на React 18, TypeScript и Vite; для интерфейса используется Ant Design, для маршрутизации — React Router.
 
-Currently, two official plugins are available:
+## Содержание
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- [Требования](#требования)
+- [Получение проекта](#получение-проекта)
+- [Установка зависимостей](#установка-зависимостей)
+- [Настройка окружения](#настройка-окружения)
+- [Запуск в режиме разработки](#запуск-в-режиме-разработки)
+- [Сборка для production](#сборка-для-production)
+- [Тесты](#тесты)
+- [Запуск через Docker Compose](#запуск-через-docker-compose)
+- [Типичные проблемы](#типичные-проблемы)
 
-## React Compiler
+## Требования
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Для локальной разработки понадобятся:
 
-## Expanding the ESLint configuration
+- Node.js актуальной LTS-версии;
+- npm (устанавливается вместе с Node.js);
+- Git — если проект клонируется из репозитория.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Docker Desktop с поддержкой WSL 2 нужен только для запуска приложения в Docker. Для обычного запуска Vite через npm Docker не требуется.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Получение проекта
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Если репозиторий ещё не склонирован, выполни команду из каталога, в котором хранишь проекты:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```powershell
+git clone <URL_РЕПОЗИТОРИЯ>
+cd OrderFlow\frontend
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Если проект уже находится на компьютере, перейди в папку frontend, например:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```powershell
+cd C:\Users\<ИМЯ_ПОЛЬЗОВАТЕЛЯ>\OneDrive\Desktop\OrderFlow\OrderFlow\frontend
 ```
+
+## Установка зависимостей
+
+При наличии `package-lock.json` рекомендуется использовать:
+
+```powershell
+npm ci
+```
+
+Если lock-файла в репозитории нет, используй:
+
+```powershell
+npm install
+```
+
+## Настройка окружения
+
+В папке `frontend` создай файл `.env`, если его ещё нет. В нём укажи адрес Backend API:
+
+```dotenv
+VITE_API_URL=http://localhost:8080/api
+```
+
+Это значение должно соответствовать адресу и префиксу API, которые настроены в Backend. Например, при таком значении запрос авторизации может отправляться на `http://localhost:8080/api/auth/login`.
+
+Шаблон переменных окружения хранится в `.env.example`. Не добавляй в `.env` секреты и не коммить локальный `.env` в Git.
+
+**Важно:** Vite читает переменные окружения при запуске. После изменения `.env` останови dev-сервер и запусти его заново.
+
+## Запуск в режиме разработки
+
+Убедись, что терминал открыт в папке `frontend`, затем выполни:
+
+```powershell
+npm run dev
+```
+
+Vite обычно запускает приложение по адресу:
+
+```text
+http://localhost:5173
+```
+
+Открой этот адрес в браузере. Если порт 5173 занят, Vite может предложить следующий свободный порт — используй адрес, который будет указан в терминале.
+
+### Backend для работы авторизации
+
+Frontend и Backend — отдельные части приложения. Запуск `npm run dev` поднимает только frontend. Чтобы авторизация работала, Backend API должен быть запущен и доступен по адресу из `VITE_API_URL`.
+
+Пользователь также должен существовать в базе данных Backend. Если команда использует seed-данные, попроси Backend-разработчика предоставить способ их загрузки и тестовые учётные данные. Не используй придуманные логин и пароль: успешный вход зависит от реально созданной записи пользователя.
+
+## Сборка для production
+
+Проверить TypeScript и собрать frontend можно командой:
+
+```powershell
+npm run build
+```
+
+Результат production-сборки Vite обычно помещается в каталог `dist/`.
+
+Для локального просмотра собранной версии (если в `package.json` настроен стандартный скрипт Vite):
+
+```powershell
+npm run preview
+```
+
+## Тесты
+
+Для запуска unit/component-тестов через Vitest используй скрипт, если он добавлен в `package.json`:
+
+```powershell
+npm run test:run
+```
+
+Для интерактивного режима Vitest, если настроен соответствующий скрипт:
+
+```powershell
+npm run test
+```
+
+Если npm сообщает, что такого скрипта нет, проверь раздел `scripts` в `package.json` и согласуй команду с текущей конфигурацией проекта.
+
+## Запуск через Docker Compose
+
+Для запуска полного окружения OrderFlow (Frontend, Backend и другие сервисы, описанные в Compose) необходим установленный и запущенный Docker Desktop.
+
+Команды выполняются **из корневой папки OrderFlow**, где находится общий `docker-compose.yml`:
+
+```powershell
+cd ..
+docker compose up --build -d
+```
+
+Проверить состояние сервисов:
+
+```powershell
+docker compose ps
+```
+
+Посмотреть логи frontend:
+
+```powershell
+docker compose logs -f frontend
+```
+
+Посмотреть логи backend:
+
+```powershell
+docker compose logs -f backend
+```
+
+Остановить сервисы:
+
+```powershell
+docker compose down
+```
+
+Адрес веб-интерфейса при Docker-запуске зависит от `ports` в `docker-compose.yml`. В конфигурации проекта frontend публикуется на порту `80`, поэтому обычно приложение открывается по адресу `http://localhost/`.
+
+Если команда `docker` не распознаётся PowerShell, установи Docker Desktop для Windows, запусти его и открой новый терминал. Инструкция: <https://docs.docker.com/desktop/setup/install/windows-install/>.
+
+## Типичные проблемы
+
+### `docker` не распознана как команда
+
+Docker CLI не установлен или недоступен в `PATH`. Установи и запусти Docker Desktop. Для разработки через `npm run dev` Docker не обязателен.
+
+### Не удаётся подключиться к `localhost:8080`
+
+Проверь, что Backend запущен, порт опубликован на хост-машину и `VITE_API_URL` указан верно. Если Backend работает внутри Docker, в Compose должен быть настроен проброс его порта на хост, например `8080:8000` — точные номера зависят от конфигурации сервиса.
+
+### Запросы блокируются CORS
+
+Backend должен разрешать origin frontend. Для локального Vite это обычно `http://localhost:5173` (или фактический порт, указанный Vite). Настройка CORS выполняется на Backend.
+
+### После изменения `.env` адрес API не изменился
+
+Останови Vite (`Ctrl + C`) и запусти `npm run dev` заново.
+
+### Вход завершается ошибкой
+
+Проверь в DevTools браузера → Network запросы `/auth/login` и `/auth/me`, их HTTP-статусы и ответы Backend. Убедись, что используется правильный API URL и что тестовый пользователь создан на стороне Backend.
+
+---
+
+## Полезные команды
+
+| Действие | Команда |
+|---|---|
+| Установить зависимости | `npm ci` |
+| Запустить frontend | `npm run dev` |
+| Production-сборка | `npm run build` |
+| Запустить тесты | `npm run test:run` |
+| Проверить Docker-сервисы | `docker compose ps` |
+| Остановить Docker-сервисы | `docker compose down` |
