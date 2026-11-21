@@ -6,6 +6,7 @@
   "scripts": {
     "test:run": "node --test tests/*.test.mjs",
     "dev": "vite",
+    "dev:local": "vite --mode local-api",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

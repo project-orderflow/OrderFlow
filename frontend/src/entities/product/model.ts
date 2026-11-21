@@ -9,11 +9,20 @@ export const productSchema = z.object({
 export type ProductInput = z.infer<typeof productSchema>;
 export const productResponseSchema = productSchema.extend({ id: z.union([z.string().min(1), z.number()]) });
 export type Product = z.infer<typeof productResponseSchema>;
+export const useLocalCatalog = import.meta.env?.DEV === true && import.meta.env.MODE === 'local-api';
+export const localCatalogSource = 'Локальный каталог';
+export const localProductFormSchema = productSchema.extend({
+  price: productSchema.shape.price
+    .positive('Цена должна быть больше нуля')
+    .max(9999999999.99, 'Цена превышает допустимый максимум')
+    .multipleOf(0.01, 'Укажите не более двух знаков после запятой'),
+});
 export interface ProductUser { role?: string; roles?: string[]; permissions?: string[] }
-export function canManageProducts(user: ProductUser | undefined, action: 'create' | 'update') {
+export function canManageProducts(user: ProductUser | undefined, action: 'create' | 'update' | 'delete') {
   if (!user) return false;
   // An explicit permission list takes precedence over role defaults.
   if (user.permissions) return user.permissions.includes(`products:${action}`);
   const roles = user.roles ?? (user.role ? [user.role] : []);
-  return roles.includes('admin') || roles.includes('manager');
+  if (useLocalCatalog) return roles.includes('ADMIN');
+  return roles.includes('admin') || (action !== 'delete' && roles.includes('manager'));
 }
