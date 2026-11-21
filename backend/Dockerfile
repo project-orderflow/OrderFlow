@@ -16,10 +16,12 @@ COPY alembic.ini ./
 
 # Копируем миграции базы данных
 COPY migrations ./migrations
+COPY entrypoint.sh ./entrypoint.sh
 
 # Устанавливаем backend и его Python-зависимости
 RUN pip install --no-cache-dir .
 
+RUN chmod +x ./entrypoint.sh
 
-# Команда, которая запускается при старте контейнера
-CMD ["uvicorn", "orderflow.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Миграции применяются перед запуском API.
+ENTRYPOINT ["/app/entrypoint.sh"]

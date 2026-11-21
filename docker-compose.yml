@@ -25,6 +25,29 @@ services:
         # Backend запустится после того, как PostgreSQL пройдет healthcheck
         condition: service_healthy
 
+    healthcheck:
+      test:
+        ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Frontend-сервис OrderFlow
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+
+    # Windows:80 -> container:80
+    ports:
+      - "80:80"
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
   # PostgreSQL-сервис
   postgres:
     # Используем готовый образ PostgreSQL 17
@@ -48,7 +71,7 @@ services:
     # Проверка, что PostgreSQL реально готов принимать подключения
     healthcheck:
       # Команда проверки готовности БД
-      test: ["CMD-SHELL", "pg_isready -U orderflow -d orderflow"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
 
       # Проверять каждые 5 секунд
       interval: 5s
