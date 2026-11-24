@@ -18,13 +18,12 @@ TanStack Query, Ant Design и единственный RouterProvider из
 `/dashboard` перенаправляет на `/`. После входа пользователь возвращается
 на исходный маршрут. Пока выполняется `/auth/me`, закрытые страницы не отображаются.
 
-Ожидаемый контракт API (backend и OpenAPI в этом репозитории отсутствуют):
+Контракт входа для backend из этого репозитория:
 
 - `POST /auth/login`: JSON `{ "email": "...", "password": "..." }`,
-  ответ `{ "access_token": "..." }`.
+  ответ содержит `access_token` и `refresh_token`.
 - `GET /auth/me`: заголовок `Authorization: Bearer <token>`,
-  ответ — пользователь `{ "id": 1, "email": "...", "name": "..." }`;
-  email и name необязательны.
+  ответ содержит `id`, `email` и `role`.
 - 401 запускает refresh и один повтор запроса; при недействительной refresh-сессии
   токен очищается и открывается вход. 403 при входе или
   восстановлении сессии открывает Unauthorized. Сетевые ошибки и 5xx
@@ -33,8 +32,9 @@ TanStack Query, Ant Design и единственный RouterProvider из
 Токен сохраняется в localStorage под ключом `orderflow.accessToken`;
 пароль и пользователь туда не записываются. Выход очищает токен и query-кэш.
 Изменения токена синхронизируются между вкладками. localStorage доступен
-JavaScript, поэтому защита от XSS обязательна; refresh token хранится в HttpOnly-cookie backend.
-Базовый URL задаётся через VITE_API_URL (по умолчанию `http://localhost:8080/api`).
+JavaScript. Текущий клиент обновления сессии ожидает HttpOnly-cookie, а backend
+из этого репозитория ожидает `refresh_token` в JSON. Поэтому после истечения
+access token в Docker и локальном режиме потребуется снова войти.
 
 Проверки перед PR: `npm run build`, `npm run lint`, `npm run test:run`.
 Тесты API и хранения сессии используют встроенный Node.js test runner (Node 24)
@@ -94,24 +94,19 @@ npm install
 
 ## Настройка окружения
 
-В папке `frontend` создай файл `.env`, если его ещё нет. В нём укажи адрес Backend API:
+В Docker адрес API задаётся при сборке через аргумент `VITE_API_URL=/api`.
+В режиме `dev:local` Vite также использует `/api` и проксирует запросы
+на `http://127.0.0.1:8000`, убирая этот префикс.
 
-```dotenv
-VITE_API_URL=http://localhost:8080/api
-```
-
-Это значение должно соответствовать адресу и префиксу API, которые настроены в Backend. Например, при таком значении запрос авторизации может отправляться на `http://localhost:8080/api/auth/login`.
-
-Шаблон переменных окружения хранится в `.env.example`. Не добавляй в `.env` секреты и не коммить локальный `.env` в Git.
-
-**Важно:** Vite читает переменные окружения при запуске. После изменения `.env` останови dev-сервер и запусти его заново.
+Для подключения к другому API в обычном режиме `npm run dev` можно задать
+`VITE_API_URL` в `frontend/.env` и перезапустить Vite.
 
 ## Запуск в режиме разработки
 
 Убедись, что терминал открыт в папке `frontend`, затем выполни:
 
 ```powershell
-npm run dev
+npm run dev:local
 ```
 
 Vite обычно запускает приложение по адресу:
@@ -124,7 +119,8 @@ http://localhost:5173
 
 ### Backend для работы авторизации
 
-Frontend и Backend — отдельные части приложения. Запуск `npm run dev` поднимает только frontend. Чтобы авторизация работала, Backend API должен быть запущен и доступен по адресу из `VITE_API_URL`.
+Запусти backend на порту `8000` по инструкции в корневом README.
+`npm run dev:local` запускает Vite и проксирует запросы к этому backend.
 
 Пользователь также должен существовать в базе данных Backend. Если команда использует seed-данные, попроси Backend-разработчика предоставить способ их загрузки и тестовые учётные данные. Не используй придуманные логин и пароль: успешный вход зависит от реально созданной записи пользователя.
 
@@ -167,35 +163,38 @@ node --test --watch tests/*.test.mjs
 Команды выполняются **из корневой папки OrderFlow**, где находится общий `docker-compose.yml`:
 
 ```powershell
-cd ..
-docker compose up --build -d
+docker compose --env-file .env.example up --build -d
 ```
 
 Проверить состояние сервисов:
 
 ```powershell
-docker compose ps
+docker compose --env-file .env.example ps
 ```
 
 Посмотреть логи frontend:
 
 ```powershell
-docker compose logs -f frontend
+docker compose --env-file .env.example logs -f frontend
 ```
 
 Посмотреть логи backend:
 
 ```powershell
-docker compose logs -f backend
+docker compose --env-file .env.example logs -f backend
 ```
 
 Остановить сервисы:
 
 ```powershell
-docker compose down
+docker compose --env-file .env.example down
 ```
 
-Адрес веб-интерфейса при Docker-запуске зависит от `ports` в `docker-compose.yml`. В конфигурации проекта frontend публикуется на порту `80`, поэтому обычно приложение открывается по адресу `http://localhost/`.
+Frontend открывается по адресу `http://localhost/` после запуска backend
+и PostgreSQL. Nginx убирает префикс `/api` при проксировании, поэтому
+`/api/auth/login` приходит в backend как `/auth/login`, а `/api/products`
+как `/products`. Прямые ссылки на страницы админ-панели обслуживает SPA.
+Docker и `dev:local` используют формат каталога backend из этого репозитория.
 
 Если команда `docker` не распознаётся PowerShell, установи Docker Desktop для Windows, запусти его и открой новый терминал. Инструкция: <https://docs.docker.com/desktop/setup/install/windows-install/>.
 
@@ -205,9 +204,10 @@ docker compose down
 
 Docker CLI не установлен или недоступен в `PATH`. Установи и запусти Docker Desktop. Для разработки через `npm run dev` Docker не обязателен.
 
-### Не удаётся подключиться к `localhost:8080`
+### API недоступен в Docker или `dev:local`
 
-Проверь, что Backend запущен, порт опубликован на хост-машину и `VITE_API_URL` указан верно. Если Backend работает внутри Docker, в Compose должен быть настроен проброс его порта на хост, например `8080:8000` — точные номера зависят от конфигурации сервиса.
+В Docker проверь состояние `backend` и `postgres` через `docker compose ps`.
+При `dev:local` проверь, что `http://127.0.0.1:8000/health` доступен с хоста.
 
 ### Запросы блокируются CORS
 
@@ -228,11 +228,11 @@ Backend должен разрешать origin frontend. Для локально
 | Действие | Команда |
 |---|---|
 | Установить зависимости | `npm ci` |
-| Запустить frontend | `npm run dev` |
+| Запустить frontend | `npm run dev:local` |
 | Production-сборка | `npm run build` |
 | Запустить тесты | `npm run test:run` |
-| Проверить Docker-сервисы | `docker compose ps` |
-| Остановить Docker-сервисы | `docker compose down` |
+| Проверить Docker-сервисы | `docker compose --env-file .env.example ps` |
+| Остановить Docker-сервисы | `docker compose --env-file .env.example down` |
 
 ## Products и refresh-token flow
 

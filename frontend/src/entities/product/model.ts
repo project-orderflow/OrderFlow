@@ -9,7 +9,7 @@ export const productSchema = z.object({
 export type ProductInput = z.infer<typeof productSchema>;
 export const productResponseSchema = productSchema.extend({ id: z.union([z.string().min(1), z.number()]) });
 export type Product = z.infer<typeof productResponseSchema>;
-export const useLocalCatalog = import.meta.env?.DEV === true && import.meta.env.MODE === 'local-api';
+export const useLocalCatalog = import.meta.env?.MODE === 'local-api';
 export const localCatalogSource = 'Локальный каталог';
 export const localProductFormSchema = productSchema.extend({
   price: productSchema.shape.price

@@ -21,7 +21,8 @@ COPY entrypoint.sh ./entrypoint.sh
 # Устанавливаем backend и его Python-зависимости
 RUN pip install --no-cache-dir .
 
-RUN chmod +x ./entrypoint.sh
+RUN sed -i 's/\r$//' ./entrypoint.sh \
+    && chmod +x ./entrypoint.sh
 
 # Миграции применяются перед запуском API.
 ENTRYPOINT ["/app/entrypoint.sh"]
