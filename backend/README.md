@@ -2,29 +2,15 @@
 
 Backend-сервис проекта OrderFlow.
 
-## Запуск backend в терминале
+## Локальный запуск в Docker
 
-Из корня репозитория выполните одну команду:
+Основная инструкция по запуску PostgreSQL и backend, миграциям, demo seed, логам и остановке находится в [DOCKER.md](DOCKER.md).
 
-```bash
-./backend/start-local.ps1
-```
-
-Скрипт сам создаёт виртуальное окружение, устанавливает зависимости, запускает
-PostgreSQL в Docker, применяет миграции и запускает Uvicorn с access-логами.
-Запросы frontend отображаются в этом же терминале. Для остановки нажмите
-`Ctrl+C`.
-
-Если нужен ручной запуск после установки зависимостей:
+Из корня репозитория backend и PostgreSQL запускаются командой:
 
 ```powershell
-Set-Location backend
-.\.venv\Scripts\Activate.ps1
-python -m alembic upgrade head
-python -m uvicorn orderflow.main:app --app-dir src --reload --host 0.0.0.0 --port 8000 --access-log --log-level info
+docker compose --env-file .env up --build -d postgres backend
 ```
-
-PostgreSQL должен быть доступен на `127.0.0.1:55432`.
 
 ## Swagger документация
 
