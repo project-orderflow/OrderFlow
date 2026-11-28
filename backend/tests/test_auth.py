@@ -3,7 +3,7 @@ from collections.abc import Awaitable, Callable
 from uuid import uuid4
 
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 from orderflow.main import app
 from orderflow.modules.identity.models import RefreshToken, Role, User
@@ -105,6 +105,90 @@ def test_refresh_rotates_and_revokes_previous_token() -> None:
         assert current_user_response.status_code == 200
 
     asyncio.run(_run_auth_case(scenario))
+
+
+def test_user_can_update_own_name_and_password() -> None:
+    async def scenario(
+        client: AsyncClient, email: str, password: str, user_id: int, role_name: str,
+    ) -> None:
+        profile = {"name": "  Новое имя  "}
+        assert (await client.patch("/auth/me", json=profile)).status_code == 401
+
+        credentials = {"email": email, "password": password}
+        login = await client.post("/auth/login", json=credentials)
+        assert login.status_code == 200
+        token = login.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        forbidden_role = await client.patch(
+            "/auth/me", json={**profile, "role": "ADMIN"}, headers=headers,
+        )
+        assert forbidden_role.status_code == 422
+
+        updated = await client.patch("/auth/me", json=profile, headers=headers)
+        assert updated.status_code == 200
+        result = {"id": user_id, "email": email, "name": "Новое имя", "role": role_name}
+        assert updated.json() == result
+        assert (await client.get("/auth/me", headers=headers)).json() == result
+
+        new_password = "updated-test-password"
+        incorrect = await client.patch(
+            "/auth/me/password",
+            json={"current_password": "wrong", "new_password": new_password},
+            headers=headers,
+        )
+        assert incorrect.status_code == 400
+        assert (await client.post("/auth/login", json=credentials)).status_code == 200
+
+        changed = await client.patch(
+            "/auth/me/password",
+            json={"current_password": password, "new_password": new_password},
+            headers=headers,
+        )
+        assert changed.status_code == 204
+        assert (await client.post("/auth/login", json=credentials)).status_code == 401
+        assert (await client.post("/auth/login", json={**credentials, "password": new_password})).status_code == 200
+
+    asyncio.run(_run_auth_case(scenario))
+
+
+def test_registration_creates_an_operator_who_can_log_in() -> None:
+    async def scenario() -> None:
+        email = f"register-{uuid4().hex}@example.test"
+        password = "registration-test-password"
+        payload = {"name": "  Тестовый оператор  ", "email": email, "password": password}
+        transport = ASGITransport(app=app)
+        try:
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                forbidden_role = await client.post(
+                    "/auth/register", json={**payload, "role": "ADMIN"},
+                )
+                assert forbidden_role.status_code == 422
+
+                responses = await asyncio.gather(
+                    client.post("/auth/register", json=payload),
+                    client.post("/auth/register", json=payload),
+                )
+                assert sorted(response.status_code for response in responses) == [201, 409]
+                account = next(response.json() for response in responses if response.status_code == 201)
+                assert account["email"] == email
+
+                login = await client.post("/auth/login", json={"email": email, "password": password})
+                assert login.status_code == 200
+                token = login.json()["access_token"]
+                current = await client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+                assert current.status_code == 200
+                assert current.json() == {**account, "name": "Тестовый оператор", "role": "OPERATOR"}
+        finally:
+            try:
+                async with SessionFactory.begin() as session:
+                    user_ids = select(User.id).where(User.email == email)
+                    await session.execute(delete(RefreshToken).where(RefreshToken.user_id.in_(user_ids)))
+                    await session.execute(delete(User).where(User.email == email))
+            finally:
+                await engine.dispose()
+
+    asyncio.run(scenario())
 
 
 async def _run_auth_case(case: AuthCase) -> None:

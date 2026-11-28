@@ -1,5 +1,6 @@
 """Create repeatable local demo users and products without modifying existing rows."""
 
+import argparse
 import asyncio
 import os
 from decimal import Decimal
@@ -33,7 +34,9 @@ DEMO_PRODUCTS = (
 )
 
 
-async def seed_demo_data(session: AsyncSession, password: str) -> tuple[int, int]:
+async def seed_demo_data(
+    session: AsyncSession, password: str, *, users_only: bool = False,
+) -> tuple[int, int]:
     roles: dict[str, Role] = {}
     for role_name in ("ADMIN", "OPERATOR", "WAREHOUSE"):
         role = await session.scalar(select(Role).where(Role.name == role_name))
@@ -59,19 +62,24 @@ async def seed_demo_data(session: AsyncSession, password: str) -> tuple[int, int
             created_users += 1
 
     created_products = 0
-    for sku, name, price in DEMO_PRODUCTS:
-        existing_product = await session.scalar(
-            select(Product).where(Product.sku == sku)
-        )
-        if existing_product is None:
-            session.add(Product(sku=sku, name=name, price=price, active=True))
-            created_products += 1
+    if not users_only:
+        for sku, name, price in DEMO_PRODUCTS:
+            existing_product = await session.scalar(
+                select(Product).where(Product.sku == sku)
+            )
+            if existing_product is None:
+                session.add(Product(sku=sku, name=name, price=price, active=True))
+                created_products += 1
 
     await session.commit()
     return created_users, created_products
 
 
 async def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--users-only", action="store_true", help="Skip demo products.")
+    args = parser.parse_args()
+
     password = os.environ.get("ORDERFLOW_DEMO_PASSWORD", "").strip()
     if len(password) < 12:
         raise SystemExit(
@@ -80,7 +88,9 @@ async def main() -> None:
 
     try:
         async with SessionFactory() as session:
-            created_users, created_products = await seed_demo_data(session, password)
+            created_users, created_products = await seed_demo_data(
+                session, password, users_only=args.users_only,
+            )
     finally:
         await engine.dispose()
 
