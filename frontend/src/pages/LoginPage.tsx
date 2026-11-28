@@ -3,7 +3,7 @@ import { Alert, Button, Form, Input, Typography } from 'antd';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthCard } from '../shared/auth/AuthCard';
 import { ApiError, fetchApi } from '../shared/api/client';
-import { getToken, setToken, subscribeToken } from '../shared/auth/token';
+import { getToken, isTokenPair, setSession, subscribeToken } from '../shared/auth/token';
 export function LoginPage() {
   const token = useSyncExternalStore(subscribeToken, getToken);
   const location = useLocation();
@@ -17,9 +17,9 @@ export function LoginPage() {
   async function login(values: { email: string; password: string }) {
     setPending(true); setError('');
     try {
-      const response = await fetchApi<{ access_token: string }>('/auth/login', { method: 'POST', body: JSON.stringify(values) });
-      if (typeof response.access_token !== 'string' || !response.access_token.trim()) throw new Error('Missing token');
-      setToken(response.access_token);
+      const response = await fetchApi<unknown>('/auth/login', { method: 'POST', body: JSON.stringify(values) });
+      if (!isTokenPair(response)) throw new Error('Invalid login response');
+      setSession(response);
       navigate(destination, { replace: true });
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 403) navigate('/unauthorized', { replace: true });
