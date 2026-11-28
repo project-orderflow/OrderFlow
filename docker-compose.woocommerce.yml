@@ -7,14 +7,20 @@ services:
       MYSQL_USER: wordpress
       MYSQL_PASSWORD: ${WC_DB_PASSWORD:?Set WC_DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${WC_DB_ROOT_PASSWORD:?Set WC_DB_ROOT_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_PASSWORD\" mysql --protocol=TCP -h 127.0.0.1 -u \"$$MYSQL_USER\" \"$$MYSQL_DATABASE\" -e 'SELECT 1' >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
     volumes:
       - woocommerce_db_data:/var/lib/mysql
 
   wordpress:
-    image: wordpress:latest
+    build: ./scripts/woocommerce
     restart: unless-stopped
     depends_on:
-      - woocommerce-db
+      woocommerce-db:
+        condition: service_healthy
     ports:
       - "127.0.0.1:8080:80"
     environment:
@@ -22,8 +28,10 @@ services:
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: ${WC_DB_PASSWORD}
       WORDPRESS_DB_NAME: wordpress
+      WC_ADMIN_PASSWORD: ${WC_ADMIN_PASSWORD:-}
     volumes:
       - wordpress_data:/var/www/html
+      - ./sample_products.csv:/opt/orderflow/sample_products.csv:ro
     networks:
       - default
       - integrations

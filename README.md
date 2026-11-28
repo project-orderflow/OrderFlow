@@ -122,20 +122,39 @@ WooCommerce, добавь в него строки `WC_DB_PASSWORD` и `WC_DB_RO
 .\scripts\start.ps1
 ```
 
-Скрипт создаёт `orderflow-integrations`, только если сети ещё нет, запускает
-магазин, затем пересобирает и запускает OrderFlow. Данные PostgreSQL, WordPress
-и MySQL остаются в Docker volumes.
+Скрипт создаёт `orderflow-integrations`, запускает магазин и пересобирает
+OrderFlow. При первом запуске на пустой базе MySQL WP-CLI устанавливает
+WordPress и WooCommerce, импортирует `sample_products.csv` без скачивания
+внешних изображений и запускает первую синхронизацию с PostgreSQL.
 
-При первом старте открой http://localhost:8080, закончи настройку WordPress,
-установи и активируй WooCommerce, импортируй демонстрационные товары и создай
-REST API-ключи с правами чтения. Это пока одноразовая ручная настройка каждого
-локального магазина. Впиши ключи в свой `.env` (`WOOCOMMERCE_BASE_URL` для
-интеграционной сети — `http://wordpress`, `WOOCOMMERCE_CONSUMER_KEY` и
-`WOOCOMMERCE_CONSUMER_SECRET`) и повторно запусти скрипт.
+Администратор нового магазина входит на http://localhost:8080/wp-admin с
+логином `orderflow-admin` и паролем из `WC_ADMIN_PASSWORD` в локальном `.env`.
+Если пароль пуст, скрипт генерирует его. Для локального магазина скрипт также
+выпускает ключи WooCommerce с правами чтения, если оба ключа в `.env` пустые.
+Ключи для уже настроенного магазина можно указать вручную, и скрипт их использует.
 
-`WOOCOMMERCE_WEBHOOK_SECRET` нужен только для проверки webhook заказов.
-Без WooCommerce API-ключей основной OrderFlow всё равно запускается, но
-синхронизация товаров из магазина работать не будет.
+При повторном запуске используются те же Docker volumes, каталог и ключи.
+Магазин, установленный до добавления автоматизации, сохраняет свой каталог.
+
+Чтобы при запуске также создать три демо-аккаунта в текущей базе OrderFlow:
+
+```powershell
+.\scripts\start.ps1 -SeedDemoUsers
+```
+
+| Email | Роль |
+| --- | --- |
+| `admin@orderflow.local` | `ADMIN` |
+| `operator@orderflow.local` | `OPERATOR` |
+| `warehouse@orderflow.local` | `WAREHOUSE` |
+
+Для новых демо-аккаунтов используется `ORDERFLOW_DEMO_PASSWORD` из `.env`.
+При повторном запуске существующие аккаунты сохраняют свои роли и пароли.
+
+Для повторной синхронизации каталога администратор OrderFlow может вызвать
+`POST /integrations/woocommerce/sync/products` в Swagger на
+http://localhost:8000/docs. Webhook заказов настраивается отдельно с
+`WOOCOMMERCE_WEBHOOK_SECRET`.
 
 ### После обновления из GitHub
 

@@ -1,17 +1,39 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from starlette.concurrency import run_in_threadpool
 
-from orderflow.modules.identity.models import RefreshToken, User
+from orderflow.modules.identity.models import RefreshToken, Role, User
 from orderflow.modules.identity.security import (
     create_access_token,
     create_refresh_token,
     get_token_subject,
+    hash_password,
     hash_refresh_token,
     verify_password,
 )
+
+
+async def register_operator(
+    session: AsyncSession,
+    name: str,
+    email: str,
+    password: str,
+) -> int | None:
+    hashed_password = await run_in_threadpool(hash_password, password)
+    operator_role_id = select(Role.id).where(Role.name == "OPERATOR").scalar_subquery()
+    statement = (
+        insert(User)
+        .values(name=name, email=email, hashed_password=hashed_password, role_id=operator_role_id)
+        .on_conflict_do_nothing(index_elements=[User.email])
+        .returning(User.id)
+    )
+    user_id = await session.scalar(statement)
+    await session.commit()
+    return user_id
 
 
 async def authenticate_and_issue_tokens(
@@ -29,6 +51,27 @@ async def authenticate_and_issue_tokens(
         return None
 
     return await _issue_token_pair(session, user)
+
+
+async def change_password(
+    session: AsyncSession,
+    user: User,
+    current_password: str,
+    new_password: str,
+) -> bool:
+    current_hash = user.hashed_password
+    if not await run_in_threadpool(verify_password, current_password, current_hash):
+        return False
+
+    new_hash = await run_in_threadpool(hash_password, new_password)
+    changed_user_id = await session.scalar(
+        update(User)
+        .where(User.id == user.id, User.is_active, User.hashed_password == current_hash)
+        .values(hashed_password=new_hash)
+        .returning(User.id)
+    )
+    await session.commit()
+    return changed_user_id is not None
 
 
 async def refresh_token_pair(

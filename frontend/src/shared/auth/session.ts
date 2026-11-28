@@ -3,6 +3,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from '../api/client';
 import { getSessionKey, setSession, subscribeToken } from './token';
 export interface User { id: string | number; email?: string; name?: string; role?: string; roles?: string[]; permissions?: string[] }
+
+export function getDisplayName(user: User | undefined) {
+  return user?.name?.trim() || user?.email || '';
+}
+
 export function useSession() {
   const sessionKey = useSyncExternalStore(subscribeToken, getSessionKey);
   const query = useQuery({

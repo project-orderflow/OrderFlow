@@ -32,6 +32,8 @@ class User(Base):
       index=True,
   )
 
+  name: Mapped[str | None] = mapped_column(String(120))
+
   hashed_password: Mapped[str] = mapped_column(
       String(255),
       nullable=False,
