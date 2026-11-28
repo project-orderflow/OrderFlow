@@ -17,6 +17,9 @@ const MIN_PASSWORD_LENGTH = 12;
 const MAX_PASSWORD_LENGTH = 128;
 
 function registrationErrorMessage(error: unknown) {
+  if (error instanceof TypeError) {
+    return 'Не удалось связаться с сервером. Проверьте, что backend запущен, и повторите попытку.';
+  }
   if (error instanceof ApiError) {
     switch (error.status) {
       case 400:
@@ -34,8 +37,9 @@ function registrationErrorMessage(error: unknown) {
       case 429:
         return 'Слишком много попыток регистрации. Попробуйте чуть позже.';
     }
+    if (error.status >= 500) return 'Сервер не смог обработать регистрацию. Попробуйте чуть позже.';
   }
-  return 'Не удалось подтвердить регистрацию. Если аккаунт уже создан, попробуйте войти.';
+  return 'Сервер вернул неожиданный ответ. Повторите попытку регистрации.';
 }
 
 export function RegisterPage() {

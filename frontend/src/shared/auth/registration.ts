@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { fetchApi } from '../api/client';
+import { fetchApi } from '../api/client.ts';
 
 interface RegistrationInput {
   name: string;

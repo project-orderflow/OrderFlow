@@ -1,6 +1,7 @@
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { fetchApi, ApiError } from '../src/shared/api/client.ts';
+import { registerAccount } from '../src/shared/auth/registration.ts';
 import { getToken, getSessionKey, getStoredSession, setSession, subscribeToken } from '../src/shared/auth/token.ts';
 
 const tokens = access => ({ access_token: access, refresh_token: `refresh-${access}` });
@@ -107,6 +108,25 @@ test('login sends JSON credentials without attaching an existing bearer token', 
     return Response.json(tokens('new'));
   };
   assert.deepEqual(await fetchApi('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }), tokens('new'));
+});
+
+test('registers with the public API and returns the account email for sign-in', async () => {
+  signIn('saved-token');
+  const account = { id: 23, email: 'operator@example.test' };
+  const password = 'registration-test-password';
+  const signal = new AbortController().signal;
+  globalThis.fetch = async (url, options) => {
+    assert.ok(url.endsWith('/auth/register'));
+    assert.equal(options.method, 'POST');
+    assert.equal(options.headers.get('Authorization'), null);
+    assert.equal(options.signal, signal);
+    assert.deepEqual(JSON.parse(options.body), { name: 'Оператор', email: account.email, password });
+    return Response.json(account, { status: 201 });
+  };
+  assert.deepEqual(
+    await registerAccount({ name: ' Оператор ', email: ` ${account.email} `, password }, signal),
+    account,
+  );
 });
 
 test('parallel 401 responses share a JSON refresh and the next refresh uses the rotated token', async () => {
