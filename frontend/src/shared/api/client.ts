@@ -31,7 +31,7 @@ async function refreshToken(token: string): Promise<string> {
   finally { if (refreshFlight?.promise === promise) refreshFlight = undefined; }
 }
 export async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const isAuth = ['/auth/login', '/auth/refresh', '/auth/logout'].includes(endpoint);
+  const isAuth = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout'].includes(endpoint);
   const originalToken = isAuth ? null : getToken();
   async function send(token: string | null) {
     const headers = new Headers(options?.headers);

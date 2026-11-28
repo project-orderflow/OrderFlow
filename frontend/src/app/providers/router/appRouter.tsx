@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { LoginPage } from '../../../pages/LoginPage';
+import { RegisterPage } from '../../../pages/RegisterPage';
 import { UnauthorizedPage } from '../../../pages/UnauthorizedPage';
 import { RequireAuth } from './RequireAuth';
 import { ProductsPage } from '../../../pages/ProductsPage';
@@ -15,6 +16,7 @@ import { SettingsPage } from '../../../pages/SettingsPage';
 
 export const appRouter = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  { path: '/register', element: <RegisterPage /> },
   { path: '/unauthorized', element: <UnauthorizedPage /> },
   { element: <RequireAuth />, children: [
   {
