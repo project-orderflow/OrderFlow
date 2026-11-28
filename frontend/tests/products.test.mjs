@@ -25,7 +25,7 @@ test('permissions deny by default and explicit permissions override roles', () =
 });
 test('products use backend GET, POST and PUT contracts', async () => {
   const originalFetch = globalThis.fetch;
-  globalThis.localStorage = { getItem: () => 'token' };
+  globalThis.localStorage = { getItem: key => key === 'orderflow.accessToken' ? 'token' : null };
   const calls = [];
   globalThis.fetch = async (url, options) => {
     calls.push({ url, options });
@@ -45,7 +45,7 @@ test('products use backend GET, POST and PUT contracts', async () => {
 test('deleting a product uses its encoded id and accepts an empty 204 response', async () => {
   const originalFetch = globalThis.fetch;
   const originalStorage = globalThis.localStorage;
-  globalThis.localStorage = { getItem: () => 'token' };
+  globalThis.localStorage = { getItem: key => key === 'orderflow.accessToken' ? 'token' : null };
   globalThis.fetch = async (url, options) => {
     assert.ok(url.endsWith('/products/a%2Fb'));
     assert.equal(options.method, 'DELETE');
@@ -65,7 +65,7 @@ test('deleting a product uses its encoded id and accepts an empty 204 response',
 test('local catalog reads Decimal prices and writes active status using POST and PATCH', async () => {
   const originalFetch = globalThis.fetch;
   const originalStorage = globalThis.localStorage;
-  globalThis.localStorage = { getItem: () => 'token' };
+  globalThis.localStorage = { getItem: key => key === 'orderflow.accessToken' ? 'token' : null };
   const localProducts = createProductsApi(true);
   const calls = [];
   const stored = { id: 'product-id', sku: product.sku, name: product.name, price: '12.50', active: false };
