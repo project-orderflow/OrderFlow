@@ -1,0 +1,38 @@
+services:
+  woocommerce-db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: ${WC_DB_PASSWORD:?Set WC_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${WC_DB_ROOT_PASSWORD:?Set WC_DB_ROOT_PASSWORD}
+    volumes:
+      - woocommerce_db_data:/var/lib/mysql
+
+  wordpress:
+    image: wordpress:latest
+    restart: unless-stopped
+    depends_on:
+      - woocommerce-db
+    ports:
+      - "127.0.0.1:8080:80"
+    environment:
+      WORDPRESS_DB_HOST: woocommerce-db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: ${WC_DB_PASSWORD}
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - default
+      - integrations
+
+volumes:
+  woocommerce_db_data:
+  wordpress_data:
+
+networks:
+  integrations:
+    external: true
+    name: orderflow-integrations

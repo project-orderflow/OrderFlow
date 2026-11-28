@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from orderflow.integrations.woocommerce.router import router as woocommerce_router
 from orderflow.modules.catalog.router import router as catalog_router
 from orderflow.modules.identity.router import router as auth_router
 from orderflow.shared.config import get_settings
@@ -14,6 +15,8 @@ app = FastAPI(
 
 app.include_router(auth_router)
 app.include_router(catalog_router)
+app.include_router(woocommerce_router)
+
 
 @app.get("/")
 async def root() -> dict[str, str]:

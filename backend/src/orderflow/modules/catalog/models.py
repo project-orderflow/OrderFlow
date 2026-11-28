@@ -2,7 +2,16 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, func, true
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Numeric,
+    String,
+    UniqueConstraint,
+    func,
+    true,
+)
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -62,6 +71,13 @@ class Product(Base):
 
 class ExternalProduct(Base):
     __tablename__ = "external_products"
+    __table_args__ = (
+        UniqueConstraint(
+            "external_system",
+            "external_product_id",
+            name="uq_external_products_source_external_id",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
@@ -70,6 +86,21 @@ class ExternalProduct(Base):
         ForeignKey("products.id"),
         nullable=False,
         index=True,
+    )
+
+    external_system: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    external_product_id: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    external_sku: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
     )
 
     product: Mapped["Product"] = relationship(

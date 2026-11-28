@@ -6,20 +6,19 @@ requires-python = ">=3.13"
 
 dependencies = [
     "fastapi",
+    "httpx",
     "uvicorn[standard]",
     "pydantic-settings",
     "pwdlib[argon2]",
     "PyJWT",
     "sqlalchemy[asyncio]>=2.0",
     "asyncpg",
+    "oauthlib",
     "alembic"
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest",
-    "httpx"
-]
+dev = ["pytest"]
 
 [build-system]
 requires = ["setuptools>=68"]

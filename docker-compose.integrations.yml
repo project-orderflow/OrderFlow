@@ -1,0 +1,10 @@
+services:
+  backend:
+    networks:
+      - default
+      - integrations
+
+networks:
+  integrations:
+    external: true
+    name: orderflow-integrations
