@@ -29,7 +29,7 @@ def test_admin_can_create_read_and_update_products() -> None:
 
         admin_tokens = await _login(client, admin_email, admin_password)
         headers = _authorization_headers(admin_tokens["access_token"])
-        sku = f"{sku_prefix}-ONE"
+        sku = f"{sku_prefix}-ONE".upper()
 
         create_response = await client.post(
             "/products",
@@ -128,7 +128,7 @@ def test_product_validation_and_sku_conflicts() -> None:
     ) -> None:
         admin_tokens = await _login(client, admin_email, admin_password)
         headers = _authorization_headers(admin_tokens["access_token"])
-        sku = f"{sku_prefix}-ONE"
+        sku = f"{sku_prefix}-ONE".upper()
 
         invalid_price_response = await client.post(
             "/products",
